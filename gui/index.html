@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Observer</title>
+<style>
+  :root {
+    --bg: #0f1419; --panel: #171d26; --panel2: #1e2632; --border: #283142;
+    --text: #d7dde6; --muted: #8a97a8; --accent: #00d39f; --accent2: #4aa3ff;
+    --online: #00d39f; --offline: #6b7686; --alert: #ff5d6c; --warn: #ffb454;
+    --space-1: 6px; --space-2: 12px; --space-3: 18px; --radius: 8px;
+    --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: system-ui, sans-serif; height: 100vh; display: flex; flex-direction: column; }
+  header { padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: var(--space-2); }
+  header h1 { font-size: 16px; margin: 0; letter-spacing: 1px; color: var(--accent); }
+  #conn { font-size: 12px; color: var(--muted); }
+  #conn.up { color: var(--online); }
+  #counts { margin-left: auto; font-size: 12px; color: var(--muted); font-family: var(--mono); }
+  button.ghost { background: transparent; color: var(--accent2); border: 1px solid var(--border);
+    font-weight: 500; padding: 4px 10px; font-size: 12px; }
+  #history { display: none; position: absolute; top: 48px; right: var(--space-3); width: 460px;
+    max-height: 70vh; overflow-y: auto; background: var(--panel2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: var(--space-2); z-index: 10; box-shadow: 0 8px 30px #0008; }
+  #history.show { display: block; }
+  #stats { display: none; position: absolute; top: 48px; right: var(--space-3); width: 520px;
+    max-height: 70vh; overflow-y: auto; background: var(--panel2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: var(--space-2); z-index: 10; box-shadow: 0 8px 30px #0008; }
+  #stats.show { display: block; }
+  #stats table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 12px; }
+  #stats th, #stats td { text-align: right; padding: 4px 6px; border-bottom: 1px solid var(--border); }
+  #stats th:first-child, #stats td:first-child { text-align: left; color: var(--accent); }
+  #stats th { color: var(--muted); text-transform: uppercase; font-size: 10px; letter-spacing: 1px; }
+  #stats td.err { color: var(--alert); }
+  .hrow { padding: 6px 4px; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 12px;
+    font-family: var(--mono); }
+  .hrow:hover { background: var(--panel); }
+  .hrow .t { color: var(--muted); margin-right: 6px; }
+  .hrow b { color: var(--accent); }
+  .hrow .st-done { color: var(--online); } .hrow .st-error { color: var(--alert); }
+  .hrow .hp { color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  main { flex: 1; display: grid; grid-template-columns: 270px 1fr; min-height: 0; }
+  aside { border-right: 1px solid var(--border); padding: var(--space-2); overflow-y: auto; }
+  .group-label { font-size: 11px; text-transform: uppercase; color: var(--muted);
+    letter-spacing: 1px; margin: var(--space-3) 0 var(--space-1); display: flex; gap: 6px; }
+  .group-label .n { color: var(--accent); }
+  .item { display: flex; align-items: center; gap: var(--space-1); padding: 5px 0;
+    font-family: var(--mono); font-size: 13px; cursor: pointer; border-radius: 6px; }
+  .item:hover { background: var(--panel2); }
+  .item.sel { color: var(--accent); }
+  .item .sub { color: var(--muted); font-size: 11px; margin-left: auto; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--offline); flex: none; }
+  .dot.online { background: var(--online); box-shadow: 0 0 6px var(--online); }
+  .dot.offline { background: var(--offline); }
+  section { display: flex; flex-direction: column; min-height: 0; padding: var(--space-2); }
+  #metrics { display: none; gap: var(--space-3); padding: var(--space-1) var(--space-2);
+    background: var(--panel2); border: 1px solid var(--border); border-radius: var(--radius);
+    margin-bottom: var(--space-2); font-family: var(--mono); font-size: 12px; }
+  #metrics.show { display: flex; }
+  #metrics b { color: var(--accent2); } #metrics .st { margin-left: auto; }
+  #metrics .running { color: var(--warn); } #metrics .done { color: var(--online); }
+  #metrics .error { color: var(--alert); } #metrics .cancelled { color: var(--muted); }
+  button.stop { background: var(--alert); color: #2a0007; }
+  #output { flex: 1; background: var(--panel); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: var(--space-2); overflow-y: auto;
+    font-family: var(--mono); font-size: 14px; white-space: pre-wrap; line-height: 1.5; }
+  .composer { display: flex; gap: var(--space-1); margin-top: var(--space-2); }
+  select, input, button { background: var(--panel); color: var(--text);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: var(--space-1) var(--space-2); font-size: 14px; }
+  input { flex: 1; }
+  button { background: var(--accent); color: #04201a; font-weight: 600; border: none; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  .alerts-head { font-size: 11px; text-transform: uppercase; color: var(--muted);
+    letter-spacing: 1px; margin: var(--space-2) 0 var(--space-1); }
+  #alerts { max-height: 130px; overflow-y: auto; background: var(--panel);
+    border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-1) var(--space-2); }
+  #alerts:empty::after { content: "no alerts"; color: var(--muted); font-size: 12px; }
+  .alert { color: var(--alert); font-family: var(--mono); font-size: 12px; padding: 2px 0; }
+  .alert .t { color: var(--muted); margin-right: 6px; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>● OBSERVER</h1>
+    <span id="conn">connecting…</span>
+    <span id="counts"></span>
+    <button id="newBtn" class="ghost">New chat</button>
+    <button id="statsBtn" class="ghost">Stats</button>
+    <button id="histBtn" class="ghost">History</button>
+  </header>
+  <div id="history"></div>
+  <div id="stats"></div>
+  <main>
+    <aside id="sidebar"></aside>
+    <section>
+      <div id="metrics">
+        <span>ttft <b id="m-ttft">–</b></span>
+        <span><span id="m-tlabel">tokens~</span> <b id="m-chunks">0</b></span>
+        <span>chars <b id="m-chars">0</b></span>
+        <span>throughput <b id="m-rate">–</b></span>
+        <span>elapsed <b id="m-elapsed">0.0s</b></span>
+        <span class="st" id="m-status">idle</span>
+      </div>
+      <div id="output"></div>
+      <div class="composer">
+        <select id="model"></select>
+        <input id="prompt" placeholder="Type a prompt and press Enter…" />
+        <button id="send">Send</button>
+      </div>
+      <div class="alerts-head">Alerts</div>
+      <div id="alerts"></div>
+    </section>
+  </main>
+<script>
+  const roster = new Map();              // component_id -> {name, status, engine, group, sub}
+  const $ = id => document.getElementById(id);
+  const out = $('output'), modelSel = $('model'), promptEl = $('prompt'), sendBtn = $('send');
+  const sidebar = $('sidebar'), connEl = $('conn'), countsEl = $('counts'), alertsEl = $('alerts');
+  const GROUPS = [['mode','Orchestrations'], ['agent','Agents'], ['demo','Demo']];
+  let run = null, timer = null;
+  let sessionId = 'sess-' + Math.random().toString(36).slice(2, 10);  // conversation thread
+
+  function groupOf(engine) {
+    if (engine === 'cofiswarm-mode') return 'mode';
+    if (engine === 'llama' || engine === 'mlx') return 'agent';
+    return 'demo';
+  }
+  function applyPresence(d) {
+    const info = d.info || {};
+    roster.set(d.component_id, {
+      name: info.name || d.model || d.component_id, status: d.status,
+      engine: info.engine || '?', group: groupOf(info.engine),
+      sub: info.server_group || info.engine || ''
+    });
+    render();
+  }
+  function render() {
+    const online = [...roster.values()].filter(r => r.status === 'online');
+    const byGroup = g => online.filter(r => r.group === g).sort((a,b)=>a.name.localeCompare(b.name));
+    sidebar.innerHTML = '';
+    for (const [g, label] of GROUPS) {
+      const items = byGroup(g);
+      if (!items.length) continue;
+      const h = document.createElement('div'); h.className = 'group-label';
+      h.innerHTML = `${label} <span class="n">${items.length}</span>`; sidebar.appendChild(h);
+      for (const r of items) {
+        const el = document.createElement('div'); el.className = 'item' + (r.name===modelSel.value?' sel':'');
+        el.innerHTML = `<span class="dot online"></span>${r.name}<span class="sub">${r.sub}</span>`;
+        el.onclick = () => { modelSel.value = r.name; render(); };
+        sidebar.appendChild(el);
+      }
+    }
+    const cur = modelSel.value; modelSel.innerHTML = '';
+    for (const [g, label] of GROUPS) {
+      const items = byGroup(g); if (!items.length) continue;
+      const og = document.createElement('optgroup'); og.label = label;
+      for (const r of items) { const o = document.createElement('option'); o.value = r.name; o.textContent = r.name; og.appendChild(o); }
+      modelSel.appendChild(og);
+    }
+    if (online.some(r => r.name === cur)) modelSel.value = cur;
+    const na = online.filter(r=>r.group==='agent').length, nm = online.filter(r=>r.group==='mode').length;
+    countsEl.textContent = `${na} agents · ${nm} modes online`;
+  }
+
+  // ---- metrics ----
+  function startMetrics() {
+    run = { t0: performance.now(), tfirst: null, chunks: 0, chars: 0 };
+    $('metrics').className = 'show';
+    setStatus('running'); $('m-ttft').textContent = '–'; $('m-rate').textContent = '–';
+    $('m-tlabel').textContent = 'tokens~'; $('m-chunks').textContent = '0'; $('m-chars').textContent = '0';
+    clearInterval(timer); timer = setInterval(tick, 100);
+  }
+  function tick() { if (run) $('m-elapsed').textContent = ((performance.now()-run.t0)/1000).toFixed(1)+'s'; }
+  function onChunk(text) {
+    if (!run) return;
+    if (run.tfirst === null) { run.tfirst = performance.now(); $('m-ttft').textContent = ((run.tfirst-run.t0)/1000).toFixed(2)+'s'; }
+    run.chunks++; run.chars += text.length;
+    $('m-chunks').textContent = run.chunks; $('m-chars').textContent = run.chars;   // live estimate
+    const secs = (performance.now()-run.t0)/1000;
+    if (secs > 0) $('m-rate').textContent = (run.chunks/secs).toFixed(1)+'/s';
+  }
+  function endMetrics(state, tok) {
+    clearInterval(timer); tick(); setStatus(state);
+    if (tok && tok.tokens != null) {
+      const secs = run ? (performance.now() - run.t0) / 1000 : 0;
+      const tps = tok.tokens_per_sec != null ? tok.tokens_per_sec : (secs > 0 ? tok.tokens / secs : 0);
+      $('m-tlabel').textContent = 'tokens';                 // exact, server-reported
+      $('m-chunks').textContent = tok.tokens;
+      $('m-rate').textContent = tps.toFixed(1) + ' tok/s';
+    }
+    run = null;
+    sendBtn.textContent = 'Send'; sendBtn.className = '';
+  }
+  function setStatus(s){ const e=$('m-status'); e.textContent=s; e.className='st '+s; }
+
+  function addAlert(msg) {
+    const el = document.createElement('div'); el.className = 'alert';
+    const ts = new Date().toLocaleTimeString();
+    el.innerHTML = `<span class="t">${ts}</span>⚠ ${msg}`; alertsEl.prepend(el);
+  }
+
+  // ---- websocket ----
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const ws = new WebSocket(`${proto}://${location.host}/ws`);
+  ws.onopen = () => { connEl.textContent = 'connected'; connEl.className = 'up'; };
+  ws.onclose = () => { connEl.textContent = 'disconnected'; connEl.className = ''; };
+  ws.onmessage = (ev) => {
+    const { type, data } = JSON.parse(ev.data);
+    if (type === 'snapshot') data.forEach(applyPresence);
+    else if (type === 'presence') applyPresence(data);
+    else if (type === 'alert') addAlert(data.message);
+    else if (type === 'start') { if (run) run.rid = data.request_id; out.textContent += `\n\n> ${data.model}:`; }
+    else if (type === 'token') {
+      if (data.error === 'cancelled') { endMetrics('cancelled', data); }
+      else if (data.error) { addAlert('stream error: ' + data.error); endMetrics('error', data); }
+      else if (data.done) { endMetrics('done', data); }
+      else { out.textContent += data.text; onChunk(data.text||''); out.scrollTop = out.scrollHeight; }
+    }
+  };
+
+  function send() {
+    if (run) { cancel(); return; }                 // button doubles as Stop while running
+    const model = modelSel.value, prompt = promptEl.value.trim();
+    if (!model || !prompt) return;
+    startMetrics();
+    sendBtn.textContent = 'Stop'; sendBtn.className = 'stop';
+    out.textContent += `\n\nYou → ${model}: ${prompt}`;
+    ws.send(JSON.stringify({ action: 'prompt', model, prompt, session_id: sessionId }));
+    promptEl.value = '';
+  }
+  $('newBtn').onclick = () => {
+    if (run) cancel();
+    sessionId = 'sess-' + Math.random().toString(36).slice(2, 10);
+    out.textContent = ''; $('metrics').className = '';
+  };
+  function cancel() {
+    if (run && run.rid) ws.send(JSON.stringify({ action: 'cancel', request_id: run.rid }));
+  }
+  sendBtn.onclick = send;
+  promptEl.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+
+  // ---- history ----
+  $('histBtn').onclick = async () => {
+    const h = $('history');
+    if (h.classList.contains('show')) { h.classList.remove('show'); return; }
+    let rows = [];
+    try { rows = await (await fetch('/history?limit=40')).json(); }
+    catch (e) { addAlert('failed to load history'); return; }
+    h.innerHTML = '';
+    rows.filter(r => r.kind === 'run').reverse().forEach(rec => {
+      const el = document.createElement('div'); el.className = 'hrow';
+      const t = new Date(rec.started_at * 1000).toLocaleTimeString();
+      const tok = rec.tokens != null ? rec.tokens + 'tok' : '–';
+      el.innerHTML = `<span class="t">${t}</span><b>${rec.model}</b> · `
+        + `<span class="st-${rec.status}">${rec.status}</span> · ${tok} · ${rec.latency_ms}ms`
+        + `<div class="hp">${(rec.prompt || '').slice(0, 90)}</div>`;
+      el.onclick = () => {
+        out.textContent += `\n\n— replay ${rec.model} (${t}) —\nYou: ${rec.prompt}\n${rec.text || ''}`;
+        out.scrollTop = out.scrollHeight; h.classList.remove('show');
+      };
+      h.appendChild(el);
+    });
+    if (!h.children.length) h.innerHTML = '<div class="hrow">no runs recorded yet</div>';
+    h.classList.add('show');
+  };
+
+  // ---- stats ----
+  $('statsBtn').onclick = async () => {
+    const s = $('stats');
+    if (s.classList.contains('show')) { s.classList.remove('show'); return; }
+    let rows = [];
+    try { rows = await (await fetch('/stats')).json(); }
+    catch (e) { addAlert('failed to load stats'); return; }
+    if (!rows.length) { s.innerHTML = '<div>no runs recorded yet</div>'; s.classList.add('show'); return; }
+    const head = '<tr><th>model</th><th>runs</th><th>err</th><th>avg ms</th><th>avg tok</th><th>tok/s</th></tr>';
+    const body = rows.map(r => `<tr><td>${r.model}</td><td>${r.runs}</td>`
+      + `<td class="${r.errors ? 'err' : ''}">${r.errors}</td>`
+      + `<td>${r.avg_latency_ms ?? '–'}</td><td>${r.avg_tokens ?? '–'}</td>`
+      + `<td>${r.avg_tps ?? '–'}</td></tr>`).join('');
+    s.innerHTML = `<table>${head}${body}</table>`;
+    s.classList.add('show');
+  };
+</script>
+</body>
+</html>

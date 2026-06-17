@@ -1,0 +1,17 @@
+# runtime artifacts (logs, history, pids — written by the running stack)
+.run/
+*.log
+
+# python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+
+# os / editor
+.DS_Store
+.vscode/
+
+# stray binary from early diagram work (not part of the project; kept on disk, not tracked)
+/image.png

@@ -1,0 +1,18 @@
+# Configurable drop-in models. Each entry runs as its own standalone process:
+#   python run_model.py --name echo-fast
+#
+# `engine: echo` uses the built-in EchoBackend (no model needed) so the scaffold runs
+# out of the box. `agent_json` (optional) points at a cofiswarm-agent-registry agent
+# file so the component reuses that agent's metadata (name/engine/model/context/...).
+models:
+  - name: echo-fast
+    engine: echo
+
+  - name: echo-slow
+    engine: echo
+
+  # Reuses cofiswarm agent metadata; still served by EchoBackend until a real
+  # cofiswarm InferenceBackend is wired in (see run_model.py docstring).
+  - name: programmer
+    engine: echo
+    agent_json: ~/cofiswarm/repos/cofiswarm-agent-registry/data/agents/programmer.json
