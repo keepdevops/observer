@@ -10,9 +10,11 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import uuid
 from pathlib import Path
 
+import aiohttp
 from aiohttp import WSMsgType, web
 
 from bus import subjects as S
@@ -23,6 +25,14 @@ from recorder.store import HistoryStore
 
 logger = logging.getLogger(__name__)
 HERE = Path(__file__).resolve().parent
+
+# Orchestration structure labels (mirror cofiswarm-agent-registry internal/modes/catalog.go).
+MODE_STRUCTURE = {
+    "flat": ("fan-out", "All agents run in parallel on the same prompt."),
+    "pipeline": ("sequential", "Agents run in order, each stage building on the last."),
+    "cascade": ("broadcast→synthesis", "Parallel broadcast, then a synthesizer reduces to one answer."),
+    "router": ("routed subset", "A classifier picks a subset; the prompt goes only to those agents."),
+}
 
 
 class ObserverGUI:
@@ -86,6 +96,53 @@ class ObserverGUI:
     async def stats(self, request: web.Request) -> web.Response:
         return web.json_response(aggregate(self._store.tail(1000)))
 
+    async def roles(self, request: web.Request) -> web.Response:
+        """Agent roles (system prompts) + the distinct model server-groups, for the role×model grid."""
+        base = Path(os.environ.get(
+            "COFISWARM_AGENTS_DIR",
+            str(Path.home() / "cofiswarm/repos/cofiswarm-agent-registry/data/agents"),
+        ))
+        roles, groups = [], {}
+        for path in sorted(base.glob("*.json")):
+            try:
+                d = json.loads(path.read_text())
+            except Exception:
+                logger.error("bad agent json %s", path, exc_info=True)
+                continue
+            name = d.get("name") or d.get("agent_id")
+            if not name:
+                continue
+            sg = d.get("server_group") or ""
+            roles.append({"name": name, "server_group": sg, "system_prompt": d.get("system_prompt", "")})
+            groups.setdefault(sg, name)  # first agent of a group = its representative target
+        models = [{"server_group": g, "representative": rep} for g, rep in sorted(groups.items()) if g]
+        return web.json_response({"roles": roles, "models": models})
+
+    async def modes(self, request: web.Request) -> web.Response:
+        """Orchestration → agent mapping: proxy the agent-registry's per-mode roster.
+
+        The registry (`GET /api/modes/{name}/agents`) is the source of truth for which agents
+        a mode drives; we attach each mode's structure label (mirrors the registry catalog).
+        Degrades per-mode: an unreachable roster yields `agents: []` rather than failing all.
+        """
+        base = os.environ.get("COFISWARM_REGISTRY_URL", "http://127.0.0.1:8012").rstrip("/")
+        out: dict = {}
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=3)) as sess:
+            for name, (structure, desc) in MODE_STRUCTURE.items():
+                entry = {"agents": [], "structure": structure, "description": desc}
+                try:
+                    async with sess.get(f"{base}/api/modes/{name}/agents") as resp:
+                        resp.raise_for_status()
+                        data = await resp.json(content_type=None)  # registry sends text/plain
+                    entry["agents"] = data.get("agents", []) or []
+                    for k in ("synthesizer", "order", "max_select"):
+                        if data.get(k) is not None:
+                            entry[k] = data[k]
+                except Exception:
+                    logger.error("mode roster fetch failed for %s", name, exc_info=True)
+                out[name] = entry
+        return web.json_response(out)
+
     async def ws(self, request: web.Request) -> web.WebSocketResponse:
         ws = web.WebSocketResponse(heartbeat=30)
         await ws.prepare(request)
@@ -110,14 +167,16 @@ class ObserverGUI:
         action = payload.get("action")
         if action == "prompt":
             await self._dispatch_prompt(ws, payload.get("model", ""), payload.get("prompt", ""),
-                                        payload.get("session_id"))
+                                        payload.get("session_id"), payload.get("system"),
+                                        payload.get("label"))
         elif action == "cancel":
             rid = payload.get("request_id")
             if rid:
                 await self._bus.publish(S.CANCEL, S.Cancel(request_id=rid))
 
     async def _dispatch_prompt(self, ws: web.WebSocketResponse, model: str, prompt: str,
-                               session_id: str | None = None) -> None:
+                               session_id: str | None = None, system: str | None = None,
+                               label: str | None = None) -> None:
         rid = uuid.uuid4().hex
         holder: dict = {}
 
@@ -130,9 +189,10 @@ class ObserverGUI:
                 await holder["sub"].unsubscribe()
 
         holder["sub"] = await self._bus.subscribe(S.tokens_subject(rid), on_token)
-        await ws.send_json({"type": "start", "data": {"request_id": rid, "model": model}})
+        # label lets the browser tag a lane "role@model" (the role×model grid).
+        await ws.send_json({"type": "start", "data": {"request_id": rid, "model": label or model}})
         req = S.InferRequest(request_id=rid, model=model, prompt=prompt, stream=True,
-                             session_id=session_id)
+                             session_id=session_id, system=system)
         asyncio.create_task(self._send_request(req))
 
     async def _send_request(self, req: S.InferRequest) -> None:
@@ -151,6 +211,8 @@ def build_app(servers: str = "nats://127.0.0.1:4222") -> web.Application:
     app.router.add_get("/ws", gui.ws)
     app.router.add_get("/history", gui.history)
     app.router.add_get("/stats", gui.stats)
+    app.router.add_get("/roles", gui.roles)
+    app.router.add_get("/modes", gui.modes)
 
     async def _startup(_app):
         await bus.connect()
