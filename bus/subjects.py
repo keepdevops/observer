@@ -95,6 +95,8 @@ class InferRequest(BaseModel):
     stream: bool = False
     # Optional conversation thread; when set, the model keeps multi-turn context.
     session_id: Optional[str] = None
+    # Optional system-prompt override (role × model): run this role on the target's model.
+    system: Optional[str] = None
     # Set by the middle man before dispatch: where the model should stream tokens.
     stream_subject: Optional[str] = None
 

@@ -31,12 +31,13 @@ class LlamaServerBackend:
         self.last_tps: float | None = None          # server-reported tokens/sec, if any
 
     async def generate_stream(self, prompt: str, max_tokens: int, history=None,
-                              session_id=None, followup=False) -> AsyncIterator[str]:
+                              session_id=None, followup=False, system=None) -> AsyncIterator[str]:
         self.last_tokens = None
         self.last_tps = None
+        sys_prompt = system if system is not None else self._system  # role×model override
         messages = []
-        if self._system:
-            messages.append({"role": "system", "content": self._system})
+        if sys_prompt:
+            messages.append({"role": "system", "content": sys_prompt})
         messages.extend(history or [])           # prior turns for multi-turn context
         messages.append({"role": "user", "content": prompt})
         body = {

@@ -37,7 +37,7 @@ class EchoBackend:
         self.last_tps: float | None = None
 
     async def generate_stream(self, prompt: str, max_tokens: int, history=None,
-                              session_id=None, followup=False) -> AsyncIterator[str]:
+                              session_id=None, followup=False, system=None) -> AsyncIterator[str]:
         self.last_tokens = None
         turn = (len(history) // 2 + 1) if history else 1
         text = f"[echo:{self._model} turn {turn}] {prompt.strip()[:200]}"
@@ -49,7 +49,7 @@ class EchoBackend:
         self.last_tokens = len(words)  # echo: one "token" per word (approximation)
 
     async def generate(self, prompt: str, max_tokens: int, history=None,
-                       session_id=None, followup=False) -> str:
+                       session_id=None, followup=False, system=None) -> str:
         parts = [p async for p in self.generate_stream(prompt, max_tokens, history=history)]
         return "".join(parts).rstrip()
 
@@ -63,7 +63,7 @@ class CofiBackendAdapter:
     def __init__(self, backend):
         self._b = backend
 
-    async def generate_stream(self, prompt: str, max_tokens: int) -> AsyncIterator[str]:
+    async def generate_stream(self, prompt: str, max_tokens: int, **_kw) -> AsyncIterator[str]:
         from cofiswarm_backend.base import GenerateRequest  # lazy: optional dependency
 
         async for chunk in self._b.generate_stream(
@@ -74,7 +74,7 @@ class CofiBackendAdapter:
             if chunk.done:
                 break
 
-    async def generate(self, prompt: str, max_tokens: int) -> str:
+    async def generate(self, prompt: str, max_tokens: int, **_kw) -> str:
         parts = [piece async for piece in self.generate_stream(prompt, max_tokens)]
         return "".join(parts)
 
@@ -178,7 +178,7 @@ class ModelComponent:
         try:
             text = await self._backend.generate(req.prompt, req.max_tokens,
                                                 history=history, session_id=req.session_id,
-                                                followup=followup)
+                                                followup=followup, system=req.system)
             self._remember(req, text)
             return S.InferResponse(request_id=req.request_id, model=self._info.name, text=text)
         except Exception:
@@ -195,7 +195,7 @@ class ModelComponent:
         try:
             async for piece in self._backend.generate_stream(
                 req.prompt, req.max_tokens, history=history,
-                session_id=req.session_id, followup=followup,
+                session_id=req.session_id, followup=followup, system=req.system,
             ):
                 parts.append(piece)
                 await self._bus.publish(
