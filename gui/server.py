@@ -26,6 +26,8 @@ from recorder.store import HistoryStore
 logger = logging.getLogger(__name__)
 HERE = Path(__file__).resolve().parent
 
+VERSION = "0.1.0"
+
 # Orchestration structure labels (mirror cofiswarm-agent-registry internal/modes/catalog.go).
 MODE_STRUCTURE = {
     "flat": ("fan-out", "All agents run in parallel on the same prompt."),
@@ -33,6 +35,15 @@ MODE_STRUCTURE = {
     "cascade": ("broadcast→synthesis", "Parallel broadcast, then a synthesizer reduces to one answer."),
     "router": ("routed subset", "A classifier picks a subset; the prompt goes only to those agents."),
 }
+
+
+def component_kind(engine: str) -> str:
+    """Classify a component by its engine (mirrors the GUI's groupOf)."""
+    if engine == "cofiswarm-mode":
+        return "mode"
+    if engine in ("llama", "mlx"):
+        return "agent"
+    return "other"
 
 
 class ObserverGUI:
@@ -143,6 +154,39 @@ class ObserverGUI:
                 out[name] = entry
         return web.json_response(out)
 
+    async def status(self, request: web.Request) -> web.Response:
+        """Swarm status derived from the live bus roster (go-forward /api/swarm/status).
+
+        The Observer holds presence for every announced component, so it answers
+        "what's online" without owning business logic — the middle man stays the coordinator.
+        """
+        counts = {"agent": 0, "mode": 0, "other": 0, "total": 0}
+        components = []
+        for cid, d in self._roster.items():
+            info = d.get("info") or {}
+            engine = info.get("engine", "?")
+            kind = component_kind(engine)
+            counts[kind] += 1
+            counts["total"] += 1
+            components.append({
+                "component_id": cid,
+                "name": info.get("name") or cid,
+                "status": d.get("status", "online"),
+                "kind": kind,
+                "engine": engine,
+                "server_group": info.get("server_group"),
+            })
+        components.sort(key=lambda c: (c["kind"], c["name"]))
+        return web.json_response({
+            "version": VERSION,
+            "online": counts["total"],
+            "counts": counts,
+            "components": components,
+        })
+
+    async def version(self, request: web.Request) -> web.Response:
+        return web.json_response({"service": "observer", "version": VERSION})
+
     async def ws(self, request: web.Request) -> web.WebSocketResponse:
         ws = web.WebSocketResponse(heartbeat=30)
         await ws.prepare(request)
@@ -213,6 +257,10 @@ def build_app(servers: str = "nats://127.0.0.1:4222") -> web.Application:
     app.router.add_get("/stats", gui.stats)
     app.router.add_get("/roles", gui.roles)
     app.router.add_get("/modes", gui.modes)
+    app.router.add_get("/status", gui.status)
+    app.router.add_get("/api/swarm/status", gui.status)  # legacy coordinator path
+    app.router.add_get("/version", gui.version)
+    app.router.add_get("/api/version", gui.version)       # legacy coordinator path
 
     async def _startup(_app):
         await bus.connect()

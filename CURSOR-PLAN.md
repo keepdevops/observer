@@ -24,14 +24,15 @@ GUI / Observer ──► middleman (NATS bus) ──► mode components ──�
 | KV admission/budget/policy | kvpool (new) | ✅ done | :8014 |
 | `/api/configure[/status]` server spawn | launcher/configure | ✅ done; now emits RoPE/YaRN/KV-quant | :8017 (down) |
 | bus presence/alerts, GUI, `/roles`, `/modes`, topology | Observer middleman + GUI | ✅ done | :8099 |
+| `/api/swarm/status`, `/api/version` | Observer (derived from bus roster) | ✅ done | :8099 |
 
 ## Not yet converted (gaps)
 1. **MLX lane (biggest gap, IN PROGRESS):** legacy `/api/mlx/{agents,health,modes,stream,submit,
    session/clear,pressure}`. Launcher `continue`d past non-llama backends, so MLX servers
    (`mlx-scout`) were never spawned — which also blocks a real **TurboQuant** run. See workstream below.
 2. **Model lifecycle:** `/api/models/convert`, `/api/inference/vllm/start` — no go-forward owner.
-3. **Meta/status:** `/api/version`, `/api/swarm/status`, `/api/metrics` aggregation,
-   `/api/health/agents`, `/api/v1/config` — partial/missing (Observer presence covers some).
+3. **Meta/status:** ✅ `/api/version` + `/api/swarm/status` now served by the Observer (derived from
+   the bus roster). Remaining: `/api/metrics` aggregation, `/api/health/agents`, `/api/v1/config`.
 4. `/api/orchestrate[/stream]` — legacy alias of architect/stream; superseded.
 
 ## Active workstream: MLX spawner (unblocks MLX lane + TurboQuant)
