@@ -1,0 +1,76 @@
+{
+  "properties": {
+    "backend": {
+      "default": "llama",
+      "title": "Backend",
+      "type": "string"
+    },
+    "context": {
+      "default": 0,
+      "title": "Context",
+      "type": "integer"
+    },
+    "draft_model": {
+      "default": "",
+      "title": "Draft Model",
+      "type": "string"
+    },
+    "engine": {
+      "default": "",
+      "title": "Engine",
+      "type": "string"
+    },
+    "extra_args": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Extra Args",
+      "type": "array"
+    },
+    "flash_attn": {
+      "default": false,
+      "title": "Flash Attn",
+      "type": "boolean"
+    },
+    "kv_cache_type": {
+      "default": "",
+      "title": "Kv Cache Type",
+      "type": "string"
+    },
+    "max_tokens": {
+      "default": 0,
+      "title": "Max Tokens",
+      "type": "integer"
+    },
+    "model": {
+      "title": "Model",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "port": {
+      "title": "Port",
+      "type": "integer"
+    },
+    "rope_scaling": {
+      "default": "",
+      "title": "Rope Scaling",
+      "type": "string"
+    },
+    "turbo_quant": {
+      "default": false,
+      "title": "Turbo Quant",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "name",
+    "model",
+    "port"
+  ],
+  "title": "LaunchAgent",
+  "type": "object"
+}

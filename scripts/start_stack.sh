@@ -56,8 +56,29 @@ for _ in $(seq 1 20); do nc -z 127.0.0.1 4222 && break; sleep 0.5; done
 "$TMUX" new-window -t "$SESSION" -n middleman -c "$DIR" "$SUP middleman $PY run_middleman.py"
 sleep 1
 "$TMUX" new-window -t "$SESSION" -n echo-fast  -c "$DIR" "$SUP echo-fast $PY run_model.py --name echo-fast"
+"$TMUX" new-window -t "$SESSION" -n registry   -c "$DIR" "$SUP registry $PY run_registry.py"
+"$TMUX" new-window -t "$SESSION" -n lifecycle  -c "$DIR" "$SUP lifecycle $PY run_lifecycle.py"
+"$TMUX" new-window -t "$SESSION" -n data       -c "$DIR" "$SUP data $PY run_data.py"
+"$TMUX" new-window -t "$SESSION" -n tools      -c "$DIR" "$SUP tools $PY run_tools.py"
+"$TMUX" new-window -t "$SESSION" -n observ     -c "$DIR" "$SUP observ $PY run_observability.py"
 "$TMUX" new-window -t "$SESSION" -n recorder   -c "$DIR" "$SUP recorder $PY run_recorder.py"
+
+# resource tier (Go, standalone repos) — bus-native via -bus; each announces presence so
+# "down" is visible. Built separately: (cd <repo> && go build -o bin/<repo> ./cmd/<repo>).
+KVPOOL_BIN="$COFI/cofiswarm-kvpool/bin/cofiswarm-kvpool"
+SLOTMGR_BIN="$COFI/cofiswarm-slot-manager/bin/cofiswarm-slot-manager"
+LAUNCHER_BIN="$COFI/cofiswarm-launcher/bin/cofiswarm-configure"
+[ -x "$KVPOOL_BIN" ] && "$TMUX" new-window -t "$SESSION" -n kvpool \
+  -c "$DIR" "$SUP kvpool $KVPOOL_BIN -bus" \
+  || echo "observer: WARN kvpool binary missing ($KVPOOL_BIN) — skipping" >&2
+[ -x "$SLOTMGR_BIN" ] && "$TMUX" new-window -t "$SESSION" -n slot-manager \
+  -c "$DIR" "$SUP slot-manager $SLOTMGR_BIN -bus" \
+  || echo "observer: WARN slot-manager binary missing ($SLOTMGR_BIN) — skipping" >&2
+[ -x "$LAUNCHER_BIN" ] && "$TMUX" new-window -t "$SESSION" -n launcher \
+  -c "$DIR" "$SUP launcher $LAUNCHER_BIN -bus" \
+  || echo "observer: WARN launcher binary missing ($LAUNCHER_BIN) — skipping" >&2
 "$TMUX" new-window -t "$SESSION" -n gui        -c "$DIR" "$SUP gui $PY run_gui.py --port 8099"
+"$TMUX" new-window -t "$SESSION" -n gateway    -c "$DIR" "$SUP gateway $PY run_gateway.py --port 8100"
 sleep 1
 # bridge all live cofiswarm agents (skips any whose backing server is down)
 "$TMUX" new-window -t "$SESSION" -n cofiswarm  -c "$DIR" "$SUP cofiswarm $PY run_cofiswarm.py"

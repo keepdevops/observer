@@ -1,0 +1,12 @@
+{
+  "description": "Broadcast by the middle man on startup so components re-announce (self-healing).",
+  "properties": {
+    "schema_version": {
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "title": "Hello",
+  "type": "object"
+}

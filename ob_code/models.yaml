@@ -16,3 +16,16 @@ models:
   - name: programmer
     engine: echo
     agent_json: ~/cofiswarm/repos/cofiswarm-agent-registry/data/agents/programmer.json
+
+  # MLX model (TurboQuant): served by mlx_lm.server, KV capped via --prompt-cache-bytes.
+  # Spawned on demand:  python run_model.py --name mlx-scout
+  # Set the model path here or via $MATRIX_MLX_MODEL; python via $MATRIX_MLX_PYTHON.
+  # `manage: false` connects to an already-running server instead of spawning one.
+  - name: mlx-scout
+    engine: mlx
+    host: 127.0.0.1
+    port: 8083
+    model: ~/models/mlx/scout-4bit
+    max_tokens: 512
+    prompt_cache_bytes: 536870912   # 512 MiB KV cap (TurboQuant)
+    manage: true

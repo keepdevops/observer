@@ -1,0 +1,43 @@
+{
+  "properties": {
+    "allowed": {
+      "default": true,
+      "title": "Allowed",
+      "type": "boolean"
+    },
+    "budget": {
+      "default": 0,
+      "title": "Budget",
+      "type": "integer"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error"
+    },
+    "ok": {
+      "default": true,
+      "title": "Ok",
+      "type": "boolean"
+    },
+    "reason": {
+      "default": "",
+      "title": "Reason",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "title": "KvAdmitReply",
+  "type": "object"
+}

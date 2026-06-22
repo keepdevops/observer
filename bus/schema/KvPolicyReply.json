@@ -1,0 +1,61 @@
+{
+  "properties": {
+    "budgets": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "default": {},
+      "title": "Budgets",
+      "type": "object"
+    },
+    "divergence_threshold": {
+      "default": 0.0,
+      "title": "Divergence Threshold",
+      "type": "number"
+    },
+    "enabled": {
+      "default": false,
+      "title": "Enabled",
+      "type": "boolean"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error"
+    },
+    "ok": {
+      "default": true,
+      "title": "Ok",
+      "type": "boolean"
+    },
+    "pressure_threshold": {
+      "default": 0.0,
+      "title": "Pressure Threshold",
+      "type": "number"
+    },
+    "proactive_fraction": {
+      "default": 0.0,
+      "title": "Proactive Fraction",
+      "type": "number"
+    },
+    "proactive_threshold": {
+      "default": 0.0,
+      "title": "Proactive Threshold",
+      "type": "number"
+    },
+    "schema_version": {
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "title": "KvPolicyReply",
+  "type": "object"
+}

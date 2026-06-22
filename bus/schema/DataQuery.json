@@ -1,0 +1,44 @@
+{
+  "properties": {
+    "key": {
+      "default": "",
+      "title": "Key",
+      "type": "string"
+    },
+    "op": {
+      "default": "get",
+      "title": "Op",
+      "type": "string"
+    },
+    "params": {
+      "additionalProperties": true,
+      "default": {},
+      "title": "Params",
+      "type": "object"
+    },
+    "resource": {
+      "title": "Resource",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "value": {
+      "anyOf": [
+        {},
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Value"
+    }
+  },
+  "required": [
+    "resource"
+  ],
+  "title": "DataQuery",
+  "type": "object"
+}

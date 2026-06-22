@@ -1,0 +1,21 @@
+{
+  "properties": {
+    "group": {
+      "default": "",
+      "title": "Group",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "tokens": {
+      "default": 0,
+      "title": "Tokens",
+      "type": "integer"
+    }
+  },
+  "title": "KvAdmitRequest",
+  "type": "object"
+}

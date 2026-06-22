@@ -1,0 +1,43 @@
+{
+  "properties": {
+    "extra_args": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Extra Args",
+      "type": "array"
+    },
+    "out": {
+      "title": "Out",
+      "type": "string"
+    },
+    "quantize": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Quantize"
+    },
+    "schema_version": {
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source": {
+      "title": "Source",
+      "type": "string"
+    }
+  },
+  "required": [
+    "source",
+    "out"
+  ],
+  "title": "ConvertRequest",
+  "type": "object"
+}

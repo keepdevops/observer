@@ -1,0 +1,72 @@
+{
+  "$defs": {
+    "ConfiguredServer": {
+      "properties": {
+        "agents": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Agents",
+          "type": "array"
+        },
+        "model": {
+          "default": "",
+          "title": "Model",
+          "type": "string"
+        },
+        "port": {
+          "default": 0,
+          "title": "Port",
+          "type": "integer"
+        },
+        "status": {
+          "default": "",
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "title": "ConfiguredServer",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "accepted": {
+      "default": false,
+      "title": "Accepted",
+      "type": "boolean"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error"
+    },
+    "ok": {
+      "default": true,
+      "title": "Ok",
+      "type": "boolean"
+    },
+    "schema_version": {
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "servers": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ConfiguredServer"
+      },
+      "title": "Servers",
+      "type": "array"
+    }
+  },
+  "title": "ConfigureReply",
+  "type": "object"
+}

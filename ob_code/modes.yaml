@@ -1,0 +1,21 @@
+# Orchestration modes — the bus-native catalog (replaces the agent-registry HTTP source).
+# `structure` / `description` mirror the cofiswarm mode catalog. `agents` is the curated
+# subset each mode drives; an EMPTY list means "all discovered agents" (resolved by the
+# registry component at query time from the agent JSON dir). Operator-editable.
+modes:
+  flat:
+    structure: fan-out
+    description: All agents run in parallel on the same prompt.
+    agents: []
+  pipeline:
+    structure: sequential
+    description: Agents run in order, each stage building on the last.
+    agents: []
+  cascade:
+    structure: broadcast→synthesis
+    description: Parallel broadcast, then a synthesizer reduces to one answer.
+    agents: []
+  router:
+    structure: routed subset
+    description: A classifier picks a subset; the prompt goes only to those agents.
+    agents: []

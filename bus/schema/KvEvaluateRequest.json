@@ -1,0 +1,21 @@
+{
+  "properties": {
+    "kv_pressure": {
+      "default": 0.0,
+      "title": "Kv Pressure",
+      "type": "number"
+    },
+    "query": {
+      "default": "",
+      "title": "Query",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "title": "KvEvaluateRequest",
+  "type": "object"
+}

@@ -1,0 +1,38 @@
+{
+  "properties": {
+    "cleared": {
+      "default": 0,
+      "title": "Cleared",
+      "type": "integer"
+    },
+    "endpoints": {
+      "default": 0,
+      "title": "Endpoints",
+      "type": "integer"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error"
+    },
+    "ok": {
+      "default": true,
+      "title": "Ok",
+      "type": "boolean"
+    },
+    "schema_version": {
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "title": "EvictReply",
+  "type": "object"
+}

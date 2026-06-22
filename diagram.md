@@ -316,46 +316,79 @@ broker boundary. The contract is the message on the wire, not shared code.
 # As-Built Implementation
 
 The sections above are the original design. This section documents what was actually built and is
-running. The scope is the **two pieces novel vs cofiswarm** — a single NATS broker "middle man" and
-event-driven (no-heartbeat) presence — plus the observer GUI, recording, and bridges that connect the
-live cofiswarm system (agents + orchestration modes) onto the bus.
+running. It started as the **two pieces novel vs cofiswarm** — a single NATS broker "middle man" and
+event-driven (no-heartbeat) presence — plus the observer GUI, recording, and bridges. Since then the
+[OBSERVER-PLAN](OBSERVER-PLAN.md) conversion has made the **bus the coordination spine** rather than a
+read-only bridge: a versioned schema contract (S0), an API gateway facade (S0), a bus-native registry
+and orchestrator (S1), and a complete model lane with MLX spawn + lifecycle (S2). The cofiswarm
+HTTP services are now optional fallbacks, not dependencies.
 
 ## As-Built Components
 
 ```mermaid
 %%{init: {"theme": "default"}}%%
 graph TB
-    BROWSER(["Browser"])
+    BROWSER(["Browser / CLI"])
 
     subgraph GUIp["GUI process (aiohttp)"]
         GUI["gui/server.py - WS bridge + /history + /stats"]
     end
+    subgraph GWp["API gateway :8100 (facade)"]
+        GW["gateway/ - app · bus_proxy · cli (HTTP+CLI -> bus)"]
+        MWARE["middleware: auth -> rate-limit -> logging -> router"]
+    end
 
     NATS{{"NATS broker :4222 - the middle man transport"}}
 
-    MM["middleman.py - router + presence + roster + hello"]
+    MM["middleman.py - router + presence + roster + hello + schema gate"]
+    SCHEMA[("bus/contracts + bus/schema/*.json - versioned contract")]
+    REG["registry component - agents/modes/roles/topology"]
+    LIFE["lifecycle component - convert · vllm.start"]
+    KVP["kvpool (Go) - .kv.admit/evaluate/policy"]
+    SLOT["slot-manager (Go) - .slots.pressure/evict"]
+    LAUN["launcher (Go) - .launcher.configure/status"]
+    DATA["data service - .data.* (memory/cache/history/rag/logs/models)"]
+    TOOLS["tool workers - .tools.calc/web (Command)"]
+    OBS["observability - .metrics / .health.agents / .config"]
     REC["recorder - runs/alerts -> .run/history.jsonl"]
     ECHO["echo model component"]
 
     subgraph Cofi["cofiswarm bridge (run_cofiswarm.py)"]
         AG["13 agent components - per-server concurrency gate"]
     end
-    subgraph Modes["modes bridge (run_modes.py)"]
-        MO["4 mode components - flat/pipeline/cascade/router"]
+    subgraph Modes["modes (run_modes.py) - native bus orchestration"]
+        MO["4 Orchestrator components - flat/pipeline/cascade/router"]
     end
 
     LLAMA["llama.cpp / MLX servers :8083-8087"]
-    DISP["cofiswarm-dispatch :8010 (SSE)"]
+    DISP["cofiswarm-dispatch :8010 (SSE) - optional --bridge fallback"]
 
     BROWSER <-->|WebSocket| GUI
+    BROWSER <-->|HTTP / CLI| GW
+    GW <-->|request| NATS
     GUI <-->|pub/sub + request| NATS
     MM <--> NATS
+    MM -.validates.-> SCHEMA
+    REG <--> NATS
+    LIFE <--> NATS
+    KVP <--> NATS
+    SLOT <--> NATS
+    LAUN <--> NATS
+    LAUN -->|spawn| LLAMA
+    SLOT -->|evict slots| LLAMA
+    DATA <--> NATS
+    TOOLS <--> NATS
+    OBS <--> NATS
+    MO -->|.tools.* call| TOOLS
+    GW -->|.metrics/.health/.config| OBS
     REC -->|subscribe| NATS
     ECHO <--> NATS
     AG <--> NATS
     MO <--> NATS
+    MO -->|.registry.modes| REG
+    MO -->|.model.* fan-out| AG
     AG -->|/v1/chat/completions stream| LLAMA
-    MO -->|/api/architect/stream| DISP
+    MO -.->|legacy| DISP
 ```
 
 ## Subject Reference (`swarm.observer.*`)
@@ -370,35 +403,65 @@ graph TB
 | `.roster` | observer → middleman | `RosterReply` | snapshot for late joiners |
 | `.cancel` | observer → models | `Cancel` | abort an in-flight request |
 | `.hello` | middleman → components | `Hello` | restart → re-announce |
-| `.model.<name>` | middleman → model | `InferRequest` | per-model dispatch (req/reply) |
+| `.model.<name>` | middleman/orchestrator → model | `InferRequest` | per-model dispatch (req/reply) |
 | `.tokens.<request_id>` | model → observers | `Token` | streamed tokens + final usage |
+| `.registry.{agents,modes,roles,topology}` | caller → registry | `*Query` / `*Reply` | catalog (S1) |
+| `.lifecycle.{convert,vllm.start}` | caller → lifecycle | `*Request` / `JobReply` | model lifecycle (S2) |
+| `.kv.{admit,evaluate,policy}` | caller → kvpool (**Go**) | `Kv*Request` / `Kv*Reply` | KV admission/pressure/policy (S3) |
+| `.slots.{pressure,evict}` | caller → slot-manager (**Go**) | `Pressure*` / `Evict*` | KV pressure + eviction (S3) |
+| `.launcher.{configure,status}` | caller → launcher (**Go**) | `ConfigureRequest` / `*Reply` | spawn servers (RoPE/YaRN/KV-quant); async, status-polled (S3) |
+| `.data.<resource>` | caller → data service | `DataQuery` / `DataReply` | Repository: memory/cache/history/rag/logs/models (S4) |
+| `.tools.<tool>` | orchestrator → tool worker | `ToolCall` / `ToolResult` | Command: calc/web, folded back into generation (S4) |
+| `.metrics` · `.health.agents` · `.config` | gateway → observability | `MetricsReply` / `HealthReply` / `Config*` | meta/observability (S5) |
+
+All design subjects now have handlers. Every envelope carries
+`schema_version`; the middleman and gateway reject unsupported majors. The exported JSON Schema
+(`bus/schema/*.json`, 47 envelopes) is the cross-language contract — the Go S3 components are the first
+non-Python consumers, proving it's wire-level, not in-process.
 
 ## Module Map
 
 | Path | Responsibility |
 |---|---|
-| `bus/subjects.py` | subjects + Pydantic envelopes (mirrors cofiswarm `agent.json`) |
+| `bus/subjects.py` | subjects + core Pydantic envelopes (mirrors cofiswarm `agent.json`) |
+| `bus/contracts/` | versioned envelopes: `base` · `registry` · `lifecycle` · `resource` · `data` · `tools` · `meta` |
+| `bus/schema_export.py` | emit `bus/schema/*.json` from every envelope (`--check` drift guard) |
+| `bus/component.py` | `ServiceComponent` — generic request/reply capability base |
 | `bus/nats_bus.py` | async NATS wrapper; request surfaces no-responders/timeout |
 | `bus/presence.py` | event-driven presence registry (no heartbeat) |
-| `bus/middleman.py` | router; slow≠down handling; roster; hello broadcast |
+| `bus/middleman.py` | router; slow≠down handling; roster; hello; schema-major gate |
+| `gateway/` | `app` · `bus_proxy` · `cli` · `middleware` (facade + auth→rate-limit→logging chain) |
+| `components/registry.py` | agent/mode/role/topology catalog (`.registry.*`) |
+| `components/lifecycle.py` | model convert + vllm start (`.lifecycle.*`) |
+| `components/data_service.py` | Repository tier (`.data.*`) |
+| `components/tools/` | `base` (ToolWorker) · `calc` · `web` — Command workers (`.tools.*`) |
+| `components/observability.py` | metrics / health.agents / config (`.metrics`,`.health.agents`,`.config`) |
 | `adapters/cofiswarm_model.py` | model component; sessions; cancel; EchoBackend |
-| `adapters/llama_backend.py` | real llama/MLX streaming + usage + per-server gate |
-| `adapters/dispatch_backend.py` | cofiswarm mode bridge via dispatch SSE |
+| `adapters/llama_backend.py` | llama/MLX OpenAI-compatible streaming + usage + per-server gate |
+| `adapters/mlx_backend.py` | MLX spawn (TurboQuant KV cap) + `/v1/models` probe + streaming |
+| `adapters/orchestrator.py` | native bus fan-out (flat/pipeline/cascade/router) + tool calls — no HTTP |
+| `adapters/dispatch_backend.py` | legacy cofiswarm mode bridge via dispatch SSE (`--bridge` only) |
+| Go repos | `cofiswarm-{kvpool,slot-manager,launcher}` — each `internal/bus` + `-bus` flag (S3) |
 | `recorder/{store,service,stats}.py` | JSONL history + per-model aggregates |
 | `gui/server.py`, `gui/index.html` | aiohttp NATS↔browser bridge + UI |
-| `run_*.py` | entry points (middleman, model, cofiswarm, modes, recorder, gui) |
-| `scripts/{start_stack,supervise}.sh` | tmux startup + per-service auto-restart |
-| `tests/` | 31 broker-free tests (pytest) |
+| `run_*.py` | middleman·model·registry·lifecycle·data·tools·observability·cofiswarm·modes·recorder·gui·gateway |
+| `scripts/{start_stack,supervise}.sh` | tmux startup + per-service auto-restart (capped backoff) |
+| `tests/` | 114 broker-free tests (pytest) + Go `internal/bus` tests in the 3 S3 repos |
 
 ## Operations
 
-- All services run in tmux session **`observer`** (windows: nats, middleman, echo-fast, recorder, gui,
-  cofiswarm, modes), each under `scripts/supervise.sh` (auto-restart, capped backoff).
+- All services run in tmux session **`observer`** (windows: nats, middleman, echo-fast, registry,
+  lifecycle, data, tools, observ, recorder, gui, gateway, kvpool, slot-manager, launcher, cofiswarm,
+  modes), each under `scripts/supervise.sh` (auto-restart, capped backoff). The Go resource tier
+  (`kvpool`, `slot-manager`, `launcher`) is built from its own repos:
+  `(cd <repo> && go build -o bin/<repo> ./cmd/<repo>)`.
 - **Reboot survival:** launchd agent `~/Library/LaunchAgents/com.observer.stack.plist` runs
   `scripts/start_stack.sh` at login.
 - **GUI:** http://127.0.0.1:8099 — grouped roster, live token streaming + metrics, Stop, sessions,
-  History (replay), Stats.
+  History (replay), Stats. **Gateway:** http://127.0.0.1:8100 — `/api/version`, `/api/swarm/status`
+  (also `python -m gateway.cli status`).
 - **Tests:** `python3 -m pytest tests/ -q` (no broker/network needed).
+- **Schema:** `python3 -m bus.schema_export` regenerates `bus/schema/*.json`; `--check` guards drift.
 - **Resilience notes:** a *slow* model (TimeoutError) stays registered; only a *no-responder* is
   deregistered. The middleman is in-memory and re-populates via `hello` on restart. Agents sharing one
   llama server serialize through a per-server semaphore (`PER_SERVER_CONCURRENCY`).

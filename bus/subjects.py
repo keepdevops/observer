@@ -15,6 +15,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from .contracts.base import Envelope
+
 PREFIX = "swarm.observer"
 ANNOUNCE = f"{PREFIX}.announce"          # component -> bus: I am here (async, once)
 GOODBYE = f"{PREFIX}.goodbye"            # component -> bus: leaving gracefully
@@ -25,6 +27,30 @@ ROSTER = f"{PREFIX}.roster"              # observer -> middle man: request curre
 CANCEL = f"{PREFIX}.cancel"              # observer -> models: cancel an in-flight request
 HELLO = f"{PREFIX}.hello"                # middle man -> components: re-announce yourselves
 
+# --- Capability subject groups: the full monolith surface. The names are reserved here
+# (mechanical mapping capability `foo` -> `.foo.*`); handlers land in later sprints. ---
+ORCHESTRATE = f"{PREFIX}.orchestrate"            # + .<mode> (S1)
+REGISTRY_AGENTS = f"{PREFIX}.registry.agents"    # (S1)
+REGISTRY_MODES = f"{PREFIX}.registry.modes"
+REGISTRY_ROLES = f"{PREFIX}.registry.roles"
+REGISTRY_TOPOLOGY = f"{PREFIX}.registry.topology"
+SLOTS_PRESSURE = f"{PREFIX}.slots.pressure"      # (S3)
+SLOTS_EVICT = f"{PREFIX}.slots.evict"
+KV_ADMIT = f"{PREFIX}.kv.admit"                  # (S3) token-budget gate
+KV_EVALUATE = f"{PREFIX}.kv.evaluate"            # pressure -> auto_clear/proactive_evict
+KV_POLICY = f"{PREFIX}.kv.policy"                # current policy config
+LAUNCHER_CONFIGURE = f"{PREFIX}.launcher.configure"  # (S3)
+LAUNCHER_STATUS = f"{PREFIX}.launcher.status"
+LIFECYCLE_CONVERT = f"{PREFIX}.lifecycle.convert"    # (S2)
+LIFECYCLE_VLLM_START = f"{PREFIX}.lifecycle.vllm.start"
+DATA = f"{PREFIX}.data"                          # + .<resource> (S4)
+TOOLS = f"{PREFIX}.tools"                        # + .<tool> (S4)
+METRICS = f"{PREFIX}.metrics"                    # (S5)
+HEALTH = f"{PREFIX}.health.agents"
+CONFIG = f"{PREFIX}.config"
+VERSION = f"{PREFIX}.version"
+SWARM_STATUS = f"{PREFIX}.swarm.status"
+
 
 def model_subject(name: str) -> str:
     """Request/reply subject a single model component subscribes to."""
@@ -34,6 +60,21 @@ def model_subject(name: str) -> str:
 def tokens_subject(request_id: str) -> str:
     """Per-request fan-out subject the model streams Token chunks to."""
     return f"{PREFIX}.tokens.{request_id}"
+
+
+def orchestrate_subject(mode: str) -> str:
+    """Request subject an orchestrator component subscribes to per mode (S1)."""
+    return f"{ORCHESTRATE}.{mode}"
+
+
+def data_subject(resource: str) -> str:
+    """Repository request subject for a data resource, e.g. memory/cache/history (S4)."""
+    return f"{DATA}.{resource}"
+
+
+def tool_subject(tool: str) -> str:
+    """Request subject a tool-worker component subscribes to (S4)."""
+    return f"{TOOLS}.{tool}"
 
 
 class ModelInfo(BaseModel):
@@ -50,14 +91,14 @@ class ModelInfo(BaseModel):
     tags: list[str] = Field(default_factory=list)
 
 
-class Announce(BaseModel):
+class Announce(Envelope):
     component_id: str = Field(min_length=1)
     kind: str = "model"
     info: ModelInfo
     infer_subject: str = Field(min_length=1)
 
 
-class Goodbye(BaseModel):
+class Goodbye(Envelope):
     component_id: str = Field(min_length=1)
     reason: str = "shutdown"
 
@@ -67,7 +108,7 @@ class Status(str, Enum):
     offline = "offline"
 
 
-class Presence(BaseModel):
+class Presence(Envelope):
     component_id: str
     status: Status
     reason: str = ""
@@ -79,14 +120,14 @@ class AlertLevel(str, Enum):
     error = "error"
 
 
-class Alert(BaseModel):
+class Alert(Envelope):
     level: AlertLevel = AlertLevel.error
     message: str
     component_id: Optional[str] = None
     request_id: Optional[str] = None
 
 
-class InferRequest(BaseModel):
+class InferRequest(Envelope):
     request_id: str = Field(min_length=1)
     model: str = Field(min_length=1)
     prompt: str
@@ -101,7 +142,7 @@ class InferRequest(BaseModel):
     stream_subject: Optional[str] = None
 
 
-class InferResponse(BaseModel):
+class InferResponse(Envelope):
     request_id: str
     model: str
     ok: bool = True
@@ -109,7 +150,7 @@ class InferResponse(BaseModel):
     error: Optional[str] = None
 
 
-class Token(BaseModel):
+class Token(Envelope):
     """One streamed chunk on `tokens_subject(request_id)`. Final chunk has done=True."""
 
     request_id: str
@@ -123,17 +164,17 @@ class Token(BaseModel):
     tokens_per_sec: Optional[float] = None  # server-reported throughput, if available
 
 
-class Cancel(BaseModel):
+class Cancel(Envelope):
     request_id: str = Field(min_length=1)
 
 
-class Hello(BaseModel):
+class Hello(Envelope):
     """Broadcast by the middle man on startup so components re-announce (self-healing)."""
 
 
-class RosterRequest(BaseModel):
+class RosterRequest(Envelope):
     """Empty request body for the roster snapshot (late-joining observers)."""
 
 
-class RosterReply(BaseModel):
+class RosterReply(Envelope):
     components: list[Presence] = Field(default_factory=list)

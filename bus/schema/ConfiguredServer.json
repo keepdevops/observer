@@ -1,0 +1,29 @@
+{
+  "properties": {
+    "agents": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Agents",
+      "type": "array"
+    },
+    "model": {
+      "default": "",
+      "title": "Model",
+      "type": "string"
+    },
+    "port": {
+      "default": 0,
+      "title": "Port",
+      "type": "integer"
+    },
+    "status": {
+      "default": "",
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "title": "ConfiguredServer",
+  "type": "object"
+}

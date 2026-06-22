@@ -1,0 +1,56 @@
+{
+  "$defs": {
+    "AlertLevel": {
+      "enum": [
+        "warning",
+        "error"
+      ],
+      "title": "AlertLevel",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "component_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Component Id"
+    },
+    "level": {
+      "$ref": "#/$defs/AlertLevel",
+      "default": "error"
+    },
+    "message": {
+      "title": "Message",
+      "type": "string"
+    },
+    "request_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Request Id"
+    },
+    "schema_version": {
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "message"
+  ],
+  "title": "Alert",
+  "type": "object"
+}

@@ -30,11 +30,31 @@ def load_specs(path: str) -> list[dict]:
     return cfg.get("models", [])
 
 
+def make_backend(spec: dict):
+    """Select a backend by engine: mlx (spawn+serve), llama (connect), else echo."""
+    engine = (spec.get("engine") or "echo").lower()
+    if engine == "mlx":
+        from adapters.mlx_backend import MLXServerBackend
+        return MLXServerBackend(spec, manage=spec.get("manage", True))
+    if engine == "llama":
+        from adapters.llama_backend import LlamaServerBackend
+        host, port = spec.get("host", "127.0.0.1"), spec["port"]
+        return LlamaServerBackend(base_url=f"http://{host}:{port}",
+                                  system_prompt=spec.get("system_prompt", ""),
+                                  model=spec.get("model") or spec["name"])
+    return EchoBackend(spec.get("name", "echo"))
+
+
 async def run(spec: dict) -> None:
     info = load_info(spec)
+    backend = make_backend(spec)
     bus = Bus(name=f"model-{info.name}")
     await bus.connect()
-    component = ModelComponent(bus, info, EchoBackend(info.name))
+    # Managed backends (e.g. MLX) spawn their server first; serve anyway if not ready so
+    # the failure surfaces loudly per-request (alert) rather than vanishing silently.
+    if hasattr(backend, "ensure_ready") and not await backend.ensure_ready():
+        log.error("backend for %s not ready; serving — requests will error loudly", info.name)
+    component = ModelComponent(bus, info, backend)
     await component.start()
     try:
         await asyncio.Event().wait()
@@ -45,7 +65,7 @@ async def run(spec: dict) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Run a single drop-in model component.")
-    ap.add_argument("--config", default="config/models.yaml")
+    ap.add_argument("--config", default="ob_code/models.yaml")
     ap.add_argument("--name", default=None, help="model name from config; default = first entry")
     args = ap.parse_args()
 

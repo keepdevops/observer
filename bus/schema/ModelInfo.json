@@ -1,0 +1,87 @@
+{
+  "description": "Mirrors the cofiswarm agent JSON shape (name/engine/backend/model/...).",
+  "properties": {
+    "backend": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Backend"
+    },
+    "context": {
+      "default": 2048,
+      "exclusiveMinimum": 0,
+      "title": "Context",
+      "type": "integer"
+    },
+    "engine": {
+      "default": "echo",
+      "title": "Engine",
+      "type": "string"
+    },
+    "max_tokens": {
+      "default": 512,
+      "exclusiveMinimum": 0,
+      "title": "Max Tokens",
+      "type": "integer"
+    },
+    "model": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Model"
+    },
+    "name": {
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "port": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Port"
+    },
+    "server_group": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Server Group"
+    },
+    "tags": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Tags",
+      "type": "array"
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "title": "ModelInfo",
+  "type": "object"
+}

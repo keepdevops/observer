@@ -1,0 +1,59 @@
+{
+  "properties": {
+    "count": {
+      "default": 0,
+      "title": "Count",
+      "type": "integer"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error"
+    },
+    "items": {
+      "default": [],
+      "items": {},
+      "title": "Items",
+      "type": "array"
+    },
+    "ok": {
+      "default": true,
+      "title": "Ok",
+      "type": "boolean"
+    },
+    "op": {
+      "default": "",
+      "title": "Op",
+      "type": "string"
+    },
+    "resource": {
+      "default": "",
+      "title": "Resource",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "value": {
+      "anyOf": [
+        {},
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Value"
+    }
+  },
+  "title": "DataReply",
+  "type": "object"
+}

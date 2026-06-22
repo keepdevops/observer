@@ -1,0 +1,41 @@
+{
+  "properties": {
+    "active": {
+      "default": false,
+      "title": "Active",
+      "type": "boolean"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error"
+    },
+    "ok": {
+      "default": true,
+      "title": "Ok",
+      "type": "boolean"
+    },
+    "ports": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {},
+      "title": "Ports",
+      "type": "object"
+    },
+    "schema_version": {
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "title": "LauncherStatusReply",
+  "type": "object"
+}
