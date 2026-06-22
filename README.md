@@ -20,7 +20,7 @@ Everything else — agents, backends, orchestration modes — is reused from cof
 
 ## Quick start
 ```bash
-pip install -r requirements.txt          # nats-py, pydantic, pyyaml (+ aiohttp for GUI)
+pip install -r requirements.txt          # nats-py, pydantic, pyyaml, aiohttp
 bash scripts/start_stack.sh              # brings up the whole stack in tmux session 'observer'
 open http://127.0.0.1:8099               # the Observer GUI
 ```
@@ -37,14 +37,21 @@ model · `recorder` · `gui` · `cofiswarm` (13 agents) · `modes` (4 orchestrat
 
 ## Layout
 ```
-bus/        subjects.py · nats_bus.py · presence.py · middleman.py     (broker + presence core)
-adapters/   cofiswarm_model.py · llama_backend.py · dispatch_backend.py (model + bridges)
-recorder/   store.py · service.py · stats.py                            (history + aggregates)
-gui/        server.py · index.html                                      (aiohttp NATS↔browser bridge)
-run_*.py    middleman · model · cofiswarm · modes · recorder · gui      (entry points)
-scripts/    start_stack.sh · supervise.sh                               (tmux startup + auto-restart)
-tests/      31 broker-free pytest tests
+bus/          subjects.py · nats_bus.py · presence.py · middleman.py · component.py · schema_export.py  (broker + presence core)
+bus/contracts/ base · registry · lifecycle · resource · data · tools · meta  (versioned envelope contracts)
+bus/schema/   *.json                                                    (exported JSON Schema — polyglot contract)
+components/   registry · lifecycle · data_service · tools/ · observability   (standalone capability processes)
+adapters/     cofiswarm_model · llama_backend · mlx_backend · orchestrator · dispatch_backend
+gateway/      app · bus_proxy · cli · middleware                        (single HTTP/CLI facade + auth→rate-limit→logging chain)
+recorder/     store.py · service.py · stats.py                          (history + aggregates)
+gui/          server.py · index.html                                    (aiohttp NATS↔browser bridge)
+run_*.py      middleman · model · registry · lifecycle · data · tools · observability · cofiswarm · modes · recorder · gui · gateway
+scripts/      start_stack.sh · supervise.sh                             (tmux startup + auto-restart)
+tests/        broker-free pytest tests
 ```
+
+> Roadmap to full monolith parity (all coordinator capabilities as standalone bus
+> components): see **[OBSERVER-PLAN.md](OBSERVER-PLAN.md)**.
 
 ## Bridges
 - **Agents** (`run_cofiswarm.py`): each `cofiswarm-agent-registry` agent becomes a bus model component

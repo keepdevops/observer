@@ -1,0 +1,51 @@
+{
+  "description": "One agent/role (mirrors a cofiswarm-agent-registry agent JSON, trimmed).",
+  "properties": {
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "port": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Port"
+    },
+    "server_group": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Server Group"
+    },
+    "system_prompt": {
+      "default": "",
+      "title": "System Prompt",
+      "type": "string"
+    },
+    "tags": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Tags",
+      "type": "array"
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "title": "AgentSpec",
+  "type": "object"
+}

@@ -1,0 +1,19 @@
+{
+  "properties": {
+    "only": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Only",
+      "type": "array"
+    },
+    "schema_version": {
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "title": "ModesQuery",
+  "type": "object"
+}

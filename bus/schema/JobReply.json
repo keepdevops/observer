@@ -1,0 +1,54 @@
+{
+  "description": "Result of launching a lifecycle job.",
+  "properties": {
+    "cmd": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Cmd",
+      "type": "array"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error"
+    },
+    "job_id": {
+      "default": "",
+      "title": "Job Id",
+      "type": "string"
+    },
+    "ok": {
+      "default": true,
+      "title": "Ok",
+      "type": "boolean"
+    },
+    "pid": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Pid"
+    },
+    "schema_version": {
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "title": "JobReply",
+  "type": "object"
+}

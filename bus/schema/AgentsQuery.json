@@ -1,0 +1,20 @@
+{
+  "description": "Optional filter by name; empty `only` returns all agents.",
+  "properties": {
+    "only": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Only",
+      "type": "array"
+    },
+    "schema_version": {
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "title": "AgentsQuery",
+  "type": "object"
+}

@@ -1,0 +1,25 @@
+{
+  "description": "One orchestration mode: its fan-out structure + the agents it drives.",
+  "properties": {
+    "agents": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Agents",
+      "type": "array"
+    },
+    "description": {
+      "default": "",
+      "title": "Description",
+      "type": "string"
+    },
+    "structure": {
+      "default": "",
+      "title": "Structure",
+      "type": "string"
+    }
+  },
+  "title": "ModeSpec",
+  "type": "object"
+}

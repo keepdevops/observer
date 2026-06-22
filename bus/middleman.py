@@ -12,6 +12,7 @@ import logging
 from nats.aio.msg import Msg
 
 from . import subjects as S
+from .contracts.base import major_supported
 from .nats_bus import Bus, NatsTimeoutError, NoRespondersError
 from .presence import Presence
 
@@ -57,6 +58,14 @@ class MiddleMan:
         )
 
     async def _on_request(self, msg: Msg, data: dict) -> None:
+        if not major_supported(data):
+            ver = data.get("schema_version")
+            logger.error("Rejected request with unsupported schema_version=%s", ver)
+            await self._alert(f"rejected request: unsupported schema_version {ver}",
+                              request_id=data.get("request_id"))
+            await self._reply_error(msg, data.get("request_id", "?"), data.get("model", "?"),
+                                    f"unsupported schema_version {ver}")
+            return
         try:
             req = S.InferRequest(**data)
         except Exception:

@@ -1,0 +1,19 @@
+{
+  "properties": {
+    "request_id": {
+      "minLength": 1,
+      "title": "Request Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "request_id"
+  ],
+  "title": "Cancel",
+  "type": "object"
+}

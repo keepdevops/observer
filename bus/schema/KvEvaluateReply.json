@@ -1,0 +1,48 @@
+{
+  "properties": {
+    "auto_clear": {
+      "default": false,
+      "title": "Auto Clear",
+      "type": "boolean"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error"
+    },
+    "ok": {
+      "default": true,
+      "title": "Ok",
+      "type": "boolean"
+    },
+    "proactive_evict": {
+      "default": false,
+      "title": "Proactive Evict",
+      "type": "boolean"
+    },
+    "proactive_fraction": {
+      "default": 0.0,
+      "title": "Proactive Fraction",
+      "type": "number"
+    },
+    "reason": {
+      "default": "",
+      "title": "Reason",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "title": "KvEvaluateReply",
+  "type": "object"
+}

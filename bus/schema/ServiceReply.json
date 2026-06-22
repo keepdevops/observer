@@ -1,0 +1,29 @@
+{
+  "description": "Base for capability replies: every reply carries ok/error so failures are explicit.\n\nCapability-specific replies (e.g. AgentsReply) inherit this and add their data fields.\nA ServiceComponent returns `ServiceReply(ok=False, error=...)` for rejected/failed calls.",
+  "properties": {
+    "error": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error"
+    },
+    "ok": {
+      "default": true,
+      "title": "Ok",
+      "type": "boolean"
+    },
+    "schema_version": {
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "title": "ServiceReply",
+  "type": "object"
+}

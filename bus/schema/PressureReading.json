@@ -1,0 +1,31 @@
+{
+  "properties": {
+    "endpoint_id": {
+      "default": "",
+      "title": "Endpoint Id",
+      "type": "string"
+    },
+    "host": {
+      "default": "",
+      "title": "Host",
+      "type": "string"
+    },
+    "port": {
+      "default": 0,
+      "title": "Port",
+      "type": "integer"
+    },
+    "slots": {
+      "default": 0,
+      "title": "Slots",
+      "type": "integer"
+    },
+    "usage": {
+      "default": 0.0,
+      "title": "Usage",
+      "type": "number"
+    }
+  },
+  "title": "PressureReading",
+  "type": "object"
+}
